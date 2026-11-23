@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bus Simulator BD — B.S TEAM</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: #070b12;
+      color: #f0f6fc;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Splash & Boot Screen */
+    #bootScreen {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #111b2e 0%, #060910 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      transition: opacity 0.6s ease;
+    }
+
+    .studio-badge {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: 6px;
+      color: #38bdf8;
+      text-shadow: 0 0 28px rgba(56, 189, 248, 0.45);
+      margin-bottom: 8px;
+    }
+
+    .studio-sub {
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: #94a3b8;
+      margin-bottom: 34px;
+      text-transform: uppercase;
+    }
+
+    #loadingBox {
+      width: min(440px, 86vw);
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #334155;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10b981, #38bdf8);
+      transition: width 0.15s ease;
+    }
+
+    .loading-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    /* Top HUD */
+    .hud-top {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+      gap: 12px;
+    }
+
+    .panel {
+      background: rgba(11, 17, 29, 0.82);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 12px;
+      padding: 10px 14px;
+      pointer-events: auto;
+    }
+
+    .corridor-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .corridor-sub {
+      font-size: 11px;
+      color: #cbd5e1;
+      margin-top: 2px;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 14px;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .stats-row span strong {
+      color: #f8fafc;
+    }
+
+    .controls-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    select, button {
+      background: rgba(15, 23, 42, 0.9);
+      color: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    select:hover, button:hover {
+      border-color: #38bdf8;
+    }
+
+    button.active-btn {
+      background: #0284c7;
+      border-color: #38bdf8;
+    }
+
+    /* Landmark & Hotel Toast */
+    #eventBanner {
+      position: fixed;
+      top: 94px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid #10b981;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      color: #ecfdf5;
+      z-index: 15;
+      display: none;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+    }
+
+    /* Bottom Cockpit HUD */
+    .hud-bottom {
+      position: fixed;
+      bottom: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      pointer-events: none;
+      z-index: 10;
+      gap: 12px;
+    }
+
+    .cluster {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      pointer-events: auto;
+    }
+
+    .dial {
+      text-align: center;
+      min-width: 78px;
+    }
+
+    .dial-val {
+      font-size: 24px;
+      font-weight: 800;
+      color: #38bdf8;
+      line-height: 1.1;
+    }
+
+    .dial-lbl {
+      font-size: 10px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .pedal-pad {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .action-btn {
+      padding: 11px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .horn-btn {
+      background: #b45309;
+      border-color: #f59e0b;
+    }
+
+    .horn-btn:hover {
+      background: #d97706;
+    }
+
+    .key-hint {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #94a3b8;
+      background: rgba(11, 17, 29, 0.72);
+      padding: 5px 12px;
+      border-radius: 999px;
+      pointer-events: none;
+      z-index: 9;
+    }
+
+    @media (max-width: 768px) {
+      .key-hint { display: none; }
+      .hud-bottom { flex-direction: column; align-items: stretch; }
+      .cluster { justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+  <div id="bootScreen">
+    <div class="studio-badge">B.S TEAM</div>
+    <div class="studio-sub">Bus Simulator BD • Realistic Highway &amp; 64-District Engine</div>
+    <div id="loadingBox">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="loading-meta">
+        <span id="statusText">Initializing BS Team Engine...</span>
+        <span id="percentText">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="eventBanner"></div>
+
+  <div class="hud-top">
+    <div class="panel">
+      <div class="corridor-title" id="corridorHeader">Corridor: Dhaka → Savar → Sirajganj → Kushtia → Meherpur</div>
+      <div class="corridor-sub" id="districtInfo">District: Dhaka • Primary: Jatiya Smriti Soudho (Savar)</div>
+      <div class="stats-row">
+        <span>Health: <strong id="healthStat">100%</strong></span>
+        <span>Dirt: <strong id="dirtStat">0%</strong></span>
+        <span>Origin Offset: <strong id="offsetStat">(0, 0)</strong></span>
+        <span>Traffic Pool: <strong id="trafficStat">0/18</strong></span>
+      </div>
+    </div>
+
+    <div class="controls-top">
+      <select id="liverySelect" title="Select Bus Livery">
+        <option value="hanif">Hanif Enterprise HD</option>
+        <option value="ena">Ena Transport Express</option>
+        <option value="shohagh">Shohagh Paribahan</option>
+        <option value="greenline">Green Line AC Coach</option>
+      </select>
+
+      <select id="transSelect" title="Transmission Mode">
+        <option value="auto">Auto Gearbox</option>
+        <option value="manual">Manual 6-Speed</option>
+      </select>
+
+      <button id="doorBtn" onclick="toggleDoor()">Door: Closed</button>
+      <button id="driverBtn" onclick="toggleDriverMode()">Driver Walk</button>
+      <button onclick="washAndRepair()">Wash &amp; Repair</button>
+    </div>
+  </div>
+
+  <div class="hud-bottom">
+    <div class="panel cluster">
+      <div class="dial">
+        <div class="dial-val" id="speedVal">0</div>
+        <div class="dial-lbl">KM/H</div>
+      </div>
+      <div class="dial">
+        <div class="dial-val" id="rpmVal">700</div>
+        <div class="dial-lbl">RPM</div>
+      </div>
+      <div class="dial">
+        <div class="dial-val" id="gearVal">1</div>
+        <div class="dial-lbl">GEAR</div>
+      </div>
+    </div>
+
+    <div class="pedal-pad">
+      <button class="action-btn" onclick="shiftGear(-1)">Gear -</button>
+      <button class="action-btn" onclick="shiftGear(1)">Gear +</button>
+      <button class="action-btn horn-btn"
+        onmousedown="startHorn()" onmouseup="stopHorn()" onmouseleave="stopHorn()"
+        ontouchstart="startHorn()" ontouchend="stopHorn()">HORN</button>
+    </div>
+  </div>
+
+  <div class="key-hint">W / Up: Throttle • S / Down: Brake &amp; Reverse • A / D or Left / Right: Steer • E / Q: Gear • H: Horn • F: Driver Walk • O: Door</div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const DISTRICTS_64 = [
+      { id: 1, name: "Dhaka", div: "Dhaka", primary: "Jatiya Smriti Soudho (Savar)", secondary: "Lalbagh Fort, Ahsan Manzil, Buriganga", road: "National_N", x: 0, y: 0, tour: true, hotel: false },
+      { id: 2, name: "Meherpur", div: "Khulna", primary: "Mujibnagar Memorial & Amrokanon", secondary: "23 Pillars, Lal Mancha, Amjhupi", road: "Regional_R", x: -13200, y: 1200, tour: true, hotel: false },
+      { id: 3, name: "Kushtia", div: "Khulna", primary: "Lalon Shah Mazar & Shilaidaha Kuthibari", secondary: "Hardinge Bridge, Lalon Shah Bridge", road: "National_N", x: -10400, y: 1600, tour: true, hotel: false },
+      { id: 4, name: "Sirajganj", div: "Rajshahi", primary: "Hatikumrul Food Village Highway Hotel", secondary: "Jamuna Bridge West Approach", road: "National_N", x: -5800, y: 3400, tour: true, hotel: true },
+      { id: 5, name: "Gazipur", div: "Dhaka", primary: "Bhawal National Park", secondary: "Bangabandhu Safari Park", road: "National_N", x: 200, y: 1700, tour: false, hotel: false },
+      { id: 6, name: "Tangail", div: "Dhaka", primary: "Jamuna Multi-Purpose Bridge", secondary: "Madhupur National Park", road: "National_N", x: -2900, y: 2900, tour: true, hotel: false },
+      { id: 7, name: "Kishoreganj", div: "Dhaka", primary: "Sholakia Eidgah", secondary: "Egarasindhur Fort", road: "Regional_R", x: 3100, y: 3300, tour: false, hotel: false },
+      { id: 8, name: "Manikganj", div: "Dhaka", primary: "Baliati Zamindar Bari", secondary: "Teota Zamindar Bari", road: "National_N", x: -2400, y: 300, tour: false, hotel: false },
+      { id: 9, name: "Munshiganj", div: "Dhaka", primary: "Idrakpur Fort", secondary: "Baba Adam Mosque", road: "Regional_R", x: 600, y: -1300, tour: false, hotel: false },
+      { id: 10, name: "Narayanganj", div: "Dhaka", primary: "Panam City (Sonargaon)", secondary: "Goaldi Mosque", road: "National_N", x: 1100, y: -400, tour: true, hotel: false },
+      { id: 11, name: "Narsingdi", div: "Dhaka", primary: "Wari-Bateshwar Ancient Site", secondary: "Dream Holiday Park", road: "National_N", x: 2100, y: 900, tour: false, hotel: false },
+      { id: 12, name: "Gopalganj", div: "Dhaka", primary: "Tungipara Memorial Complex", secondary: "Barni Baor", road: "National_N", x: -3300, y: -4500, tour: true, hotel: false },
+      { id: 13, name: "Faridpur", div: "Dhaka", primary: "Kobi Jasimuddin House", secondary: "Mathurapur Deoul", road: "National_N", x: -3600, y: -1400, tour: false, hotel: false },
+      { id: 14, name: "Madaripur", div: "Dhaka", primary: "Shakuni Lake", secondary: "Shah Madar Dargah", road: "National_N", x: -1100, y: -3400, tour: false, hotel: false },
+      { id: 15, name: "Rajbari", div: "Dhaka", primary: "Goalanda Ferry Ghat", secondary: "Mir Mosharraf Hossain Academy", road: "Regional_R", x: -4600, y: -500, tour: false, hotel: false },
+      { id: 16, name: "Shariatpur", div: "Dhaka", primary: "Sureshwar Darbar Sharif", secondary: "Kartikpur Zamindar Bari", road: "Zilla_Z", x: -300, y: -3000, tour: false, hotel: false },
+      { id: 17, name: "Chittagong", div: "Chittagong", primary: "Patenga Sea Beach", secondary: "Foy's Lake, Batali Hill", road: "National_N", x: 7800, y: -7600, tour: true, hotel: false },
+      { id: 18, name: "Cox's Bazar", div: "Chittagong", primary: "Cox's Bazar Marine Drive & Beach", secondary: "Inani Beach, St. Martin's Island", road: "National_N", x: 9200, y: -13500, tour: true, hotel: false },
+      { id: 19, name: "Bandarban", div: "Chittagong", primary: "Nilgiri & Golden Temple", secondary: "Boga Lake, Nafakhum", road: "Zilla_Z", x: 9700, y: -8900, tour: true, hotel: false },
+      { id: 20, name: "Rangamati", div: "Chittagong", primary: "Kaptai Lake & Hanging Bridge", secondary: "Rajban Vihara, Sajek Valley", road: "Regional_R", x: 9900, y: -6800, tour: true, hotel: false },
+      { id: 21, name: "Khagrachhari", div: "Chittagong", primary: "Alutila Mysterious Cave", secondary: "Risang Waterfall", road: "Regional_R", x: 8500, y: -4500, tour: true, hotel: false },
+      { id: 22, name: "Comilla", div: "Chittagong", primary: "Shalban Buddhist Vihara", secondary: "Mainamati", road: "National_N", x: 4100, y: -1800, tour: false, hotel: false },
+      { id: 23, name: "Brahmanbaria", div: "Chittagong", primary: "Hatir Pool & Anderson Memorial", secondary: "Akhaura", road: "National_N", x: 3900, y: 1100, tour: false, hotel: false },
+      { id: 24, name: "Chandpur", div: "Chittagong", primary: "Chandpur Steamer River Port", secondary: "Angikar Monument", road: "Regional_R", x: 1800, y: -3100, tour: false, hotel: false },
+      { id: 25, name: "Feni", div: "Chittagong", primary: "Bijoy Singh Dighi", secondary: "Muhuri Barrage", road: "National_N", x: 5400, y: -4300, tour: false, hotel: false },
+      { id: 26, name: "Noakhali", div: "Chittagong", primary: "Gandhi Ashram & Bajra Mosque", secondary: "Nijhum Dweep", road: "Regional_R", x: 3600, y: -4900, tour: false, hotel: false },
+      { id: 27, name: "Lakshmipur", div: "Chittagong", primary: "Dalal Bazar Zamindar Bari", secondary: "Khoa Sagar Dighi", road: "Regional_R", x: 2400, y: -4500, tour: false, hotel: false },
+      { id: 28, name: "Khulna", div: "Khulna", primary: "Sundarbans Launch Gateway", secondary: "Karamjal, Kotka", road: "National_N", x: -4600, y: -5800, tour: true, hotel: false },
+      { id: 29, name: "Bagerhat", div: "Khulna", primary: "Sixty Dome Mosque", secondary: "Mongla Sundarbans Entry", road: "National_N", x: -3400, y: -6300, tour: true, hotel: false },
+      { id: 30, name: "Satkhira", div: "Khulna", primary: "Sundarbans Shyamnagar & Mandarbaria", secondary: "Mai Champa Dargah", road: "Regional_R", x: -6900, y: -6100, tour: true, hotel: false },
+      { id: 31, name: "Chuadanga", div: "Khulna", primary: "Karpasdanga Neelkuthi", secondary: "Chuadanga Bara Mosque", road: "Regional_R", x: -11500, y: -500, tour: false, hotel: false },
+      { id: 32, name: "Jessore", div: "Khulna", primary: "Benapole Port & Sagardari", secondary: "Chanchra Shiva Temple", road: "National_N", x: -6700, y: -3300, tour: false, hotel: false },
+      { id: 33, name: "Jhenaidah", div: "Khulna", primary: "Naldanga Temple Complex", secondary: "Dhol Samudra Dighi", road: "National_N", x: -7800, y: -1400, tour: false, hotel: false },
+      { id: 34, name: "Magura", div: "Khulna", primary: "Raja Sitaram Roy Rajbari", secondary: "District Heritage Hub", road: "National_N", x: -5800, y: -1500, tour: false, hotel: false },
+      { id: 35, name: "Narail", div: "Khulna", primary: "Chitra River Otter Fishing", secondary: "Kadamtala Mosque", road: "Zilla_Z", x: -4800, y: -3200, tour: false, hotel: false },
+      { id: 36, name: "Rajshahi", div: "Rajshahi", primary: "Varendra Heritage Gateway", secondary: "Regional Connector", road: "National_N", x: -9500, y: 3200, tour: false, hotel: false },
+      { id: 37, name: "Bogra", div: "Rajshahi", primary: "Mahasthangarh", secondary: "Gokul Medh, Vasu Vihara", road: "National_N", x: -5200, y: 5600, tour: true, hotel: false },
+      { id: 38, name: "Joypurhat", div: "Rajshahi", primary: "Hinda-Koshba Shahi Mosque", secondary: "Lokma Rajbari", road: "Regional_R", x: -6900, y: 7200, tour: false, hotel: false },
+      { id: 39, name: "Naogaon", div: "Rajshahi", primary: "Paharpur Buddhist Vihara", secondary: "Kusumba Mosque", road: "Regional_R", x: -7900, y: 5500, tour: true, hotel: false },
+      { id: 40, name: "Natore", div: "Rajshahi", primary: "Pagla Raja Palace & Halti Beel", secondary: "Natore Heritage", road: "National_N", x: -7400, y: 3300, tour: false, hotel: false },
+      { id: 41, name: "Chapai Nawabganj", div: "Rajshahi", primary: "Chhota Sona Mosque", secondary: "Darashbari Mosque", road: "National_N", x: -11500, y: 4400, tour: false, hotel: false },
+      { id: 42, name: "Pabna", div: "Rajshahi", primary: "Jor Bangla Temple", secondary: "Paksey", road: "National_N", x: -6800, y: 1400, tour: false, hotel: false },
+      { id: 43, name: "Rangpur", div: "Rangpur", primary: "Tajhat Palace", secondary: "Vinnojagat, Chiklee Park", road: "National_N", x: -5900, y: 9600, tour: true, hotel: false },
+      { id: 44, name: "Dinajpur", div: "Rangpur", primary: "Kantajew Temple", secondary: "Ramsagar, Shopnopuri", road: "National_N", x: -8800, y: 9300, tour: true, hotel: false },
+      { id: 45, name: "Kurigram", div: "Rangpur", primary: "Dharla Bridge", secondary: "Chilmari Ghat", road: "Regional_R", x: -3900, y: 9900, tour: false, hotel: false },
+      { id: 46, name: "Gaibandha", div: "Rangpur", primary: "Palace of Raja Birat", secondary: "Naldanga Zamindar Bari", road: "Regional_R", x: -4300, y: 7400, tour: false, hotel: false },
+      { id: 47, name: "Lalmonirhat", div: "Rangpur", primary: "Tin Bigha Corridor & Burimari", secondary: "Teesta Barrage", road: "National_N", x: -5300, y: 11100, tour: true, hotel: false },
+      { id: 48, name: "Nilphamari", div: "Rangpur", primary: "Nilsagar Dighi & Chini Mosque", secondary: "Saidpur Rail Factory", road: "Regional_R", x: -7700, y: 10800, tour: false, hotel: false },
+      { id: 49, name: "Panchagarh", div: "Rangpur", primary: "Banglabandha Zero Point", secondary: "Bhitargarh", road: "National_N", x: -9500, y: 13200, tour: true, hotel: false },
+      { id: 50, name: "Thakurgaon", div: "Rangpur", primary: "Baliadangi Giant Mango Tree", secondary: "Haripur Rajbari", road: "National_N", x: -10100, y: 11400, tour: false, hotel: false },
+      { id: 51, name: "Sylhet", div: "Sylhet", primary: "Ratargul Swamp Forest & Jaflong", secondary: "Hazrat Shah Jalal Shrine", road: "National_N", x: 7400, y: 5600, tour: true, hotel: false },
+      { id: 52, name: "Moulvibazar", div: "Sylhet", primary: "Hakaluki Haor & Tea Gardens", secondary: "Madhabkunda Waterfall", road: "Regional_R", x: 6700, y: 3800, tour: true, hotel: false },
+      { id: 53, name: "Habiganj", div: "Sylhet", primary: "Satchari & Putijuri Mosque", secondary: "Kalibari", road: "National_N", x: 5100, y: 3300, tour: false, hotel: false },
+      { id: 54, name: "Sunamganj", div: "Sylhet", primary: "Haor Wetlands & Selbarash Mosque", secondary: "Sukhair Kalibari Temple", road: "Regional_R", x: 5400, y: 6800, tour: true, hotel: false },
+      { id: 55, name: "Barisal", div: "Barisal", primary: "Oxford Church", secondary: "Sharkal Fort", road: "National_N", x: -300, y: -5600, tour: false, hotel: false },
+      { id: 56, name: "Patuakhali", div: "Barisal", primary: "Kuakata Sea Beach", secondary: "Kuakata Buddhist Temple", road: "National_N", x: -200, y: -8600, tour: true, hotel: false },
+      { id: 57, name: "Bhola", div: "Barisal", primary: "Char Kukri-Mukri", secondary: "Monpura Island", road: "Regional_R", x: 1400, y: -6800, tour: false, hotel: false },
+      { id: 58, name: "Barguna", div: "Barisal", primary: "Bibichini Shahi Mosque", secondary: "Sonarchar", road: "Zilla_Z", x: -1400, y: -7900, tour: false, hotel: false },
+      { id: 59, name: "Jhalokati", div: "Barisal", primary: "Rajapur Saturia Palace", secondary: "Regional Terminal", road: "Regional_R", x: -1100, y: -6100, tour: false, hotel: false },
+      { id: 60, name: "Pirojpur", div: "Barisal", primary: "Momin Mosque", secondary: "Two-Domed Mosque", road: "Regional_R", x: -2100, y: -6400, tour: false, hotel: false },
+      { id: 61, name: "Mymensingh", div: "Mymensingh", primary: "Shashi Lodge & Brahmaputra", secondary: "Alexandra Castle", road: "National_N", x: 100, y: 5200, tour: false, hotel: false },
+      { id: 62, name: "Sherpur", div: "Mymensingh", primary: "Gajni Leisure Centre", secondary: "Madhutila Eco-Park", road: "Regional_R", x: -1400, y: 7400, tour: true, hotel: false },
+      { id: 63, name: "Jamalpur", div: "Mymensingh", primary: "Lauchapra Picnic Spot", secondary: "Gandhi Ashram", road: "Regional_R", x: -2400, y: 6200, tour: false, hotel: false },
+      { id: 64, name: "Netrokona", div: "Mymensingh", primary: "Birishiri China Matir Pahar", secondary: "Someswari River", road: "Zilla_Z", x: 2100, y: 6400, tour: true, hotel: false }
+    ];
+
+    const LIVERIES = {
+      hanif: { name: "Hanif Enterprise", primary: "#15803d", accent: "#facc15", stripe: "#ffffff" },
+      ena: { name: "Ena Transport", primary: "#b91c1c", accent: "#f8fafc", stripe: "#f59e0b" },
+      shohagh: { name: "Shohagh Paribahan", primary: "#1d4ed8", accent: "#38bdf8", stripe: "#ffffff" },
+      greenline: { name: "Green Line AC", primary: "#047857", accent: "#a7f3d0", stripe: "#fef08a" }
+    };
+
+    let audioCtx = null;
+    let engineOsc = null;
+    let engineGain = null;
+    let hornOsc1 = null;
+    let hornOsc2 = null;
+    let hornGain = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = new AC();
+
+      engineOsc = audioCtx.createOscillator();
+      engineOsc.type = "sawtooth";
+      engineOsc.frequency.value = 42;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 210;
+
+      engineGain = audioCtx.createGain();
+      engineGain.gain.value = 0.03;
+
+      engineOsc.connect(filter);
+      filter.connect(engineGain);
+      engineGain.connect(audioCtx.destination);
+      engineOsc.start();
+    }
+
+    function updateEngineAudio(rpm) {
+      if (!audioCtx || !engineOsc || !engineGain) return;
+      const norm = Math.max(0, Math.min(1, (rpm - 650) / 1950));
+      engineOsc.frequency.setTargetAtTime(38 + norm * 78, audioCtx.currentTime, 0.08);
+      engineGain.gain.setTargetAtTime(0.02 + norm * 0.055, audioCtx.currentTime, 0.08);
+    }
+
+    function startHorn() {
+      initAudio();
+      if (!audioCtx || hornOsc1) return;
+      hornOsc1 = audioCtx.createOscillator();
+      hornOsc2 = audioCtx.createOscillator();
+      hornGain = audioCtx.createGain();
+
+      hornOsc1.type = "sawtooth";
+      hornOsc2.type = "square";
+      hornOsc1.frequency.value = 290;
+      hornOsc2.frequency.value = 365;
+
+      hornGain.gain.value = 0.11;
+
+      hornOsc1.connect(hornGain);
+      hornOsc2.connect(hornGain);
+      hornGain.connect(audioCtx.destination);
+
+      hornOsc1.start();
+      hornOsc2.start();
+    }
+
+    function stopHorn() {
+      if (hornOsc1) { try { hornOsc1.stop(); } catch (_) {} hornOsc1 = null; }
+      if (hornOsc2) { try { hornOsc2.stop(); } catch (_) {} hornOsc2 = null; }
+      hornGain = null;
+    }
+
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    const GEAR_RATIOS = [-3.8, 0, 4.1, 2.5, 1.65, 1.18, 0.88, 0.72];
+    const GEAR_LABELS = ["R", "N", "1", "2", "3", "4", "5", "6"];
+    const RECENTER_THRESHOLD = 2000;
+
+    const state = {
+      livery: "hanif",
+      transmission: "auto",
+      gearIndex: 2,
+      speedKmh: 0,
+      rpm: 700,
+      steerAngle: 0,
+      heading: 0,
+      busX: 0,
+      busY: 0,
+      originOffsetX: 0,
+      originOffsetY: 0,
+      health: 100,
+      dirt: 0,
+      doorsOpen: false,
+      driverWalking: false,
+      driverX: 0,
+      driverY: 0,
+      keys: {},
+      traffic: [],
+      announcedDistricts: new Set()
+    };
+
+    const TRAFFIC_TYPES = ["Truck", "Local Bus", "CNG", "Car"];
+    for (let i = 0; i < 18; i++) {
+      state.traffic.push({
+        type: TRAFFIC_TYPES[i % TRAFFIC_TYPES.length],
+        laneOffset: (i % 2 === 0 ? 1 : -1) * (4.2 + (i % 3) * 1.4),
+        distAhead: -220 + i * 38,
+        speedKmh: 45 + (i % 5) * 11,
+        color: ["#eab308", "#0ea5e9", "#22c55e", "#f97316"][i % 4]
+      });
+    }
+
+    const ROUTE_WAYPOINTS = [
+      { x: 0, y: 0 },
+      { x: -1400, y: 400 },
+      { x: -3600, y: 1800 },
+      { x: -5800, y: 3400 },
+      { x: -8200, y: 2400 },
+      { x: -10400, y: 1600 },
+      { x: -11900, y: 1400 },
+      { x: -13200, y: 1200 }
+    ];
+
+    function getRoadCenterX(y) {
+      for (let i = 0; i < ROUTE_WAYPOINTS.length - 1; i++) {
+        const a = ROUTE_WAYPOINTS[i];
+        const b = ROUTE_WAYPOINTS[i + 1];
+        const minY = Math.min(a.y, b.y);
+        const maxY = Math.max(a.y, b.y);
+        if (y >= minY && y <= maxY && Math.abs(b.y - a.y) > 1) {
+          const t = (y - a.y) / (b.y - a.y);
+          return a.x + (b.x - a.x) * t;
+        }
+      }
+      return -13200;
+    }
+
+    document.getElementById("liverySelect").addEventListener("change", (e) => {
+      state.livery = e.target.value;
+    });
+
+    document.getElementById("transSelect").addEventListener("change", (e) => {
+      state.transmission = e.target.value;
+    });
+
+    function shiftGear(delta) {
+      state.gearIndex = Math.max(0, Math.min(GEAR_RATIOS.length - 1, state.gearIndex + delta));
+    }
+
+    function toggleDoor() {
+      state.doorsOpen = !state.doorsOpen;
+      document.getElementById("doorBtn").textContent = state.doorsOpen ? "Door: Open" : "Door: Closed";
+    }
+
+    function toggleDriverMode() {
+      if (Math.abs(state.speedKmh) > 2.5 && !state.driverWalking) {
+        showBanner("Stop the bus first (under 2.5 KM/H) to step out!");
+        return;
+      }
+      state.driverWalking = !state.driverWalking;
+      if (state.driverWalking) {
+        state.driverX = state.busX + 3.2;
+        state.driverY = state.busY;
+        document.getElementById("driverBtn").classList.add("active-btn");
+        document.getElementById("driverBtn").textContent = "Back to Bus";
+        showBanner("Driver Walk Mode Active — Use WASD / Arrows to walk around.");
+      } else {
+        document.getElementById("driverBtn").classList.remove("active-btn");
+        document.getElementById("driverBtn").textContent = "Driver Walk";
+        showBanner("Returned to Driver Seat.");
+      }
+    }
+
+    function washAndRepair() {
+      state.health = 100;
+      state.dirt = 0;
+      showBanner("Coach Repaired (100% Health) & Washed (0% Dirt)!");
+    }
+
+    let bannerTimer = null;
+    function showBanner(msg) {
+      const el = document.getElementById("eventBanner");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => { el.style.display = "none"; }, 3600);
+    }
+
+    window.addEventListener("keydown", (e) => {
+      initAudio();
+      const k = e.key.toLowerCase();
+      state.keys[k] = true;
+      if (k === "e") shiftGear(1);
+      if (k === "q") shiftGear(-1);
+      if (k === "h") startHorn();
+      if (k === "f") toggleDriverMode();
+      if (k === "o") toggleDoor();
+    });
+
+    window.addEventListener("keyup", (e) => {
+      const k = e.key.toLowerCase();
+      state.keys[k] = false;
+      if (k === "h") stopHorn();
+    });
+
+    let lastTime = performance.now();
+
+    function updateSimulation(dt) {
+      const up = state.keys["w"] || state.keys["arrowup"];
+      const down = state.keys["s"] || state.keys["arrowdown"];
+      const left = state.keys["a"] || state.keys["arrowleft"];
+      const right = state.keys["d"] || state.keys["arrowright"];
+
+      if (state.driverWalking) {
+        const walkSpeed = 5.5;
+        if (up) state.driverY -= walkSpeed * dt;
+        if (down) state.driverY += walkSpeed * dt;
+        if (left) state.driverX -= walkSpeed * dt;
+        if (right) state.driverX += walkSpeed * dt;
+        state.speedKmh *= 0.85;
+        return;
+      }
+
+      const steerInput = (right ? 1 : 0) - (left ? 1 : 0);
+      const speedFactor = Math.max(0.35, 1 - Math.abs(state.speedKmh) / 110);
+      state.steerAngle += (steerInput * 32 * speedFactor - state.steerAngle) * Math.min(1, dt * 8);
+
+      const healthFactor = 0.45 + 0.55 * (state.health / 100);
+
+      if (state.transmission === "auto") {
+        if (up && state.gearIndex < 2) state.gearIndex = 2;
+        if (down && Math.abs(state.speedKmh) < 2) state.gearIndex = 0;
+        if (state.gearIndex >= 2 && state.rpm > 2250 && state.gearIndex < GEAR_RATIOS.length - 1) {
+          state.gearIndex++;
+        } else if (state.gearIndex > 2 && state.rpm < 950) {
+          state.gearIndex--;
+        }
+      }
+
+      const activeRatio = GEAR_RATIOS[state.gearIndex];
+      const throttle = up ? 1 : 0;
+      const brake = down ? 1 : 0;
+
+      if (activeRatio !== 0 && throttle > 0) {
+        const accel = (12.5 * (activeRatio / 4.1) * healthFactor);
+        state.speedKmh += accel * dt * 3.6;
+      } else {
+        state.speedKmh *= Math.pow(0.88, dt);
+      }
+
+      if (brake > 0) {
+        state.speedKmh -= Math.sign(state.speedKmh) * Math.min(Math.abs(state.speedKmh), 45 * dt);
+      }
+
+      state.speedKmh = Math.max(-35, Math.min(125, state.speedKmh));
+
+      const speedMs = state.speedKmh / 3.6;
+      if (Math.abs(speedMs) > 0.15) {
+        state.heading += (state.steerAngle * 0.018) * (speedMs / 15) * dt;
+      }
+
+      state.busX += Math.sin(state.heading) * speedMs * dt;
+      state.busY -= Math.cos(state.heading) * speedMs * dt;
+
+      const distFromOrigin = Math.hypot(state.busX, state.busY);
+      if (distFromOrigin >= RECENTER_THRESHOLD) {
+        state.originOffsetX += state.busX;
+        state.originOffsetY += state.busY;
+        state.busX = 0;
+        state.busY = 0;
+      }
+
+      const targetRpm = 700 + Math.abs(state.speedKmh) * Math.abs(activeRatio || 1) * 14 + throttle * 450;
+      state.rpm += (Math.min(2600, Math.max(650, targetRpm)) - state.rpm) * Math.min(1, dt * 6);
+      updateEngineAudio(state.rpm);
+
+      if (Math.abs(state.speedKmh) > 15) {
+        state.dirt = Math.min(100, state.dirt + dt * 0.06);
+      }
+
+      const worldX = state.originOffsetX + state.busX;
+      const worldY = state.originOffsetY + state.busY;
+
+      let nearest = DISTRICTS_64[0];
+      let bestDist = Infinity;
+
+      for (const d of DISTRICTS_64) {
+        const dist = Math.hypot(worldX - d.x, worldY - d.y);
+        if (dist < bestDist) {
+          bestDist = dist;
+          nearest = d;
+        }
+        if (dist < 450 && !state.announcedDistricts.has(d.id)) {
+          state.announcedDistricts.add(d.id);
+          const tag = d.hotel ? " [Mandatory Highway Hotel Stop]" : (d.tour ? " [Tour Highlight]" : "");
+          showBanner(`Entered ${d.name} (${d.div})${tag} — ${d.primary}`);
+        }
+      }
+
+      let activeTrafficCount = 0;
+      for (const npc of state.traffic) {
+        npc.distAhead += ((npc.speedKmh - state.speedKmh) / 3.6) * dt;
+        if (npc.distAhead > 260) npc.distAhead = -180;
+        if (npc.distAhead < -220) npc.distAhead = 220;
+        if (Math.abs(npc.distAhead) < 220) activeTrafficCount++;
+
+        const npcScreenX = npc.laneOffset;
+        const npcScreenY = -npc.distAhead;
+        if (Math.abs(npcScreenX) < 3.4 && Math.abs(npcScreenY) < 8.5) {
+          const impact = Math.abs(state.speedKmh - npc.speedKmh) / 3.6;
+          if (impact > 4) {
+            state.health = Math.max(0, state.health - impact * 0.6);
+            state.speedKmh *= 0.65;
+            showBanner(`Collision with ${npc.type}! Coach Health: ${Math.round(state.health)}%`);
+          }
+          npc.distAhead = npc.distAhead >= 0 ? npc.distAhead + 18 : npc.distAhead - 18;
+        }
+      }
+
+      document.getElementById("speedVal").textContent = Math.round(Math.abs(state.speedKmh));
+      document.getElementById("rpmVal").textContent = Math.round(state.rpm);
+      document.getElementById("gearVal").textContent = GEAR_LABELS[state.gearIndex];
+      document.getElementById("healthStat").textContent = `${Math.round(state.health)}%`;
+      document.getElementById("dirtStat").textContent = `${Math.round(state.dirt)}%`;
+      document.getElementById("offsetStat").textContent = `(${Math.round(state.originOffsetX)}, ${Math.round(state.originOffsetY)})`;
+      document.getElementById("trafficStat").textContent = `${activeTrafficCount}/${state.traffic.length}`;
+      document.getElementById("districtInfo").textContent =
+        `District: ${nearest.name} (${nearest.road}) • Primary: ${nearest.primary}`;
+    }
+
+    function drawScene() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const pxPerMeter = 14;
+
+      ctx.fillStyle = "#14532d";
+      ctx.fillRect(0, 0, w, h);
+
+      const camX = state.driverWalking ? state.driverX : state.busX;
+      const camY = state.driverWalking ? state.driverY : state.busY;
+
+      ctx.save();
+      ctx.translate(w / 2, h * 0.62);
+
+      const roadWidthMeters = 13;
+      const roadPx = roadWidthMeters * pxPerMeter;
+      const roadCenterRelX = (getRoadCenterX(state.originOffsetY + camY) - (state.originOffsetX + camX)) * pxPerMeter;
+
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(roadCenterRelX - roadPx / 2, -h, roadPx, h * 2);
+
+      ctx.strokeStyle = "#f8fafc";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(roadCenterRelX - roadPx / 2 + 6, -h);
+      ctx.lineTo(roadCenterRelX - roadPx / 2 + 6, h);
+      ctx.moveTo(roadCenterRelX + roadPx / 2 - 6, -h);
+      ctx.lineTo(roadCenterRelX + roadPx / 2 - 6, h);
+      ctx.stroke();
+
+      const dashOffset = ((state.originOffsetY + camY) * pxPerMeter) % 48;
+      ctx.strokeStyle = "#facc15";
+      ctx.setLineDash([24, 24]);
+      ctx.lineDashOffset = -dashOffset;
+      ctx.beginPath();
+      ctx.moveTo(roadCenterRelX, -h);
+      ctx.lineTo(roadCenterRelX, h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const worldX = state.originOffsetX + camX;
+      const worldY = state.originOffsetY + camY;
+
+      for (const d of DISTRICTS_64) {
+        const dx = (d.x - worldX) * pxPerMeter;
+        const dy = (d.y - worldY) * pxPerMeter;
+        if (Math.abs(dx) < w && Math.abs(dy) < h) {
+          ctx.fillStyle = d.hotel ? "#f59e0b" : "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(dx, dy, 8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#f8fafc";
+          ctx.font = "bold 12px sans-serif";
+          ctx.fillText(`${d.name} — ${d.primary}`, dx + 12, dy + 4);
+        }
+      }
+
+      for (const npc of state.traffic) {
+        const nx = (npc.laneOffset + (state.busX - camX)) * pxPerMeter;
+        const ny = (-npc.distAhead + (state.busY - camY)) * pxPerMeter;
+        if (Math.abs(ny) < h) {
+          ctx.fillStyle = npc.color;
+          ctx.fillRect(nx - 14, ny - 28, 28, 56);
+          ctx.fillStyle = "#0f172a";
+          ctx.font = "10px sans-serif";
+          ctx.fillText(npc.type, nx - 13, ny + 3);
+        }
+      }
+
+      const busScreenX = (state.busX - camX) * pxPerMeter;
+      const busScreenY = (state.busY - camY) * pxPerMeter;
+      const liv = LIVERIES[state.livery];
+
+      ctx.save();
+      ctx.translate(busScreenX, busScreenY);
+      ctx.rotate(state.heading);
+
+      ctx.fillStyle = liv.primary;
+      ctx.beginPath();
+      ctx.roundRect(-20, -56, 40, 112, 7);
+      ctx.fill();
+
+      ctx.fillStyle = liv.accent;
+      ctx.fillRect(-18, -12, 36, 22);
+      ctx.fillStyle = liv.stripe;
+      ctx.fillRect(-18, 14, 36, 6);
+
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(-16, -50, 32, 16);
+
+      if (state.doorsOpen) {
+        ctx.fillStyle = "#ef4444";
+        ctx.fillRect(19, 10, 5, 24);
+      }
+
+      ctx.restore();
+
+      if (state.driverWalking) {
+        const drX = (state.driverX - camX) * pxPerMeter;
+        const drY = (state.driverY - camY) * pxPerMeter;
+        ctx.fillStyle = "#facc15";
+        ctx.beginPath();
+        ctx.arc(drX, drY, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function gameLoop(now) {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+      updateSimulation(dt);
+      drawScene();
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener("load", () => {
+      const loadingBox = document.getElementById("loadingBox");
+      const fill = document.getElementById("progressFill");
+      const status = document.getElementById("statusText");
+      const pct = document.getElementById("percentText");
+      const boot = document.getElementById("bootScreen");
+
+      setTimeout(() => {
+        loadingBox.style.display = "flex";
+        const steps = [
+          [15, "Initializing BS Team Engine..."],
+          [42, "Mounting 64-District Bangladesh Database..."],
+          [75, "Loading Dhaka → Savar → Sirajganj → Kushtia → Meherpur Corridor..."],
+          [100, "Ready to Drive!"]
+        ];
+        let idx = 0;
+        const timer = setInterval(() => {
+          const [p, msg] = steps[idx];
+          fill.style.width = `${p}%`;
+          status.textContent = msg;
+          pct.textContent = `${p}%`;
+          idx++;
+          if (idx >= steps.length) {
+            clearInterval(timer);
+            setTimeout(() => {
+              boot.style.opacity = "0";
+              setTimeout(() => { boot.style.display = "none"; }, 600);
+            }, 300);
+          }
+        }, 320);
+      }, 650);
+
+      requestAnimationFrame(gameLoop);
+    });
+  </script>
+</body>
+</html>
